@@ -1,0 +1,10 @@
+D:\Instituto\2DAM\Interfaces\Proyectos C#\Oki\Oki\bin\Debug\Oki.exe.config
+D:\Instituto\2DAM\Interfaces\Proyectos C#\Oki\Oki\bin\Debug\Oki.exe
+D:\Instituto\2DAM\Interfaces\Proyectos C#\Oki\Oki\bin\Debug\Oki.pdb
+D:\Instituto\2DAM\Interfaces\Proyectos C#\Oki\Oki\obj\Debug\Oki.csprojAssemblyReference.cache
+D:\Instituto\2DAM\Interfaces\Proyectos C#\Oki\Oki\obj\Debug\Oki.frmOki.resources
+D:\Instituto\2DAM\Interfaces\Proyectos C#\Oki\Oki\obj\Debug\Oki.Properties.Resources.resources
+D:\Instituto\2DAM\Interfaces\Proyectos C#\Oki\Oki\obj\Debug\Oki.csproj.GenerateResource.cache
+D:\Instituto\2DAM\Interfaces\Proyectos C#\Oki\Oki\obj\Debug\Oki.csproj.CoreCompileInputs.cache
+D:\Instituto\2DAM\Interfaces\Proyectos C#\Oki\Oki\obj\Debug\Oki.exe
+D:\Instituto\2DAM\Interfaces\Proyectos C#\Oki\Oki\obj\Debug\Oki.pdb
