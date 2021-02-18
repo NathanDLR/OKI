@@ -32,16 +32,16 @@ namespace Oki
             this.lstArchivos = new System.Windows.Forms.ListBox();
             this.btnProcesar = new System.Windows.Forms.Button();
             this.btnEnviar = new System.Windows.Forms.Button();
+            this.lblInfo = new System.Windows.Forms.Label();
+            this.lblTxt = new System.Windows.Forms.Label();
             this.SuspendLayout();
             // 
             // lstArchivos
             // 
             this.lstArchivos.FormattingEnabled = true;
-            this.lstArchivos.ItemHeight = 16;
-            this.lstArchivos.Location = new System.Drawing.Point(73, 39);
-            this.lstArchivos.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.lstArchivos.Location = new System.Drawing.Point(55, 32);
             this.lstArchivos.Name = "lstArchivos";
-            this.lstArchivos.Size = new System.Drawing.Size(641, 532);
+            this.lstArchivos.Size = new System.Drawing.Size(482, 433);
             this.lstArchivos.TabIndex = 0;
             // 
             // btnProcesar
@@ -50,10 +50,9 @@ namespace Oki
             this.btnProcesar.FlatAppearance.BorderColor = System.Drawing.Color.Teal;
             this.btnProcesar.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btnProcesar.Font = new System.Drawing.Font("Calibri", 14.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.btnProcesar.Location = new System.Drawing.Point(73, 604);
-            this.btnProcesar.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.btnProcesar.Location = new System.Drawing.Point(55, 491);
             this.btnProcesar.Name = "btnProcesar";
-            this.btnProcesar.Size = new System.Drawing.Size(315, 91);
+            this.btnProcesar.Size = new System.Drawing.Size(236, 74);
             this.btnProcesar.TabIndex = 1;
             this.btnProcesar.Text = "PROCESAR";
             this.btnProcesar.UseVisualStyleBackColor = false;
@@ -65,28 +64,49 @@ namespace Oki
             this.btnEnviar.FlatAppearance.BorderColor = System.Drawing.Color.Teal;
             this.btnEnviar.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btnEnviar.Font = new System.Drawing.Font("Calibri", 14.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.btnEnviar.Location = new System.Drawing.Point(401, 604);
-            this.btnEnviar.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.btnEnviar.Location = new System.Drawing.Point(301, 491);
             this.btnEnviar.Name = "btnEnviar";
-            this.btnEnviar.Size = new System.Drawing.Size(315, 91);
+            this.btnEnviar.Size = new System.Drawing.Size(236, 74);
             this.btnEnviar.TabIndex = 2;
             this.btnEnviar.Text = "ENVIAR";
             this.btnEnviar.UseVisualStyleBackColor = false;
-            this.btnEnviar.Click += new System.EventHandler(this.button2_Click);
+            this.btnEnviar.Click += new System.EventHandler(this.btnEnviar_Click);
+            // 
+            // lblInfo
+            // 
+            this.lblInfo.AutoSize = true;
+            this.lblInfo.Font = new System.Drawing.Font("Calibri", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.lblInfo.Location = new System.Drawing.Point(51, 593);
+            this.lblInfo.Name = "lblInfo";
+            this.lblInfo.Size = new System.Drawing.Size(50, 23);
+            this.lblInfo.TabIndex = 3;
+            this.lblInfo.Text = "Info: ";
+            // 
+            // lblTxt
+            // 
+            this.lblTxt.AutoSize = true;
+            this.lblTxt.Font = new System.Drawing.Font("Calibri", 14.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.lblTxt.Location = new System.Drawing.Point(122, 593);
+            this.lblTxt.Name = "lblTxt";
+            this.lblTxt.Size = new System.Drawing.Size(137, 23);
+            this.lblTxt.TabIndex = 4;
+            this.lblTxt.Text = "Nothing to show";
             // 
             // frmOki
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 16F);
+            this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.SystemColors.ControlLightLight;
-            this.ClientSize = new System.Drawing.Size(789, 811);
+            this.ClientSize = new System.Drawing.Size(592, 659);
+            this.Controls.Add(this.lblTxt);
+            this.Controls.Add(this.lblInfo);
             this.Controls.Add(this.btnEnviar);
             this.Controls.Add(this.btnProcesar);
             this.Controls.Add(this.lstArchivos);
-            this.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
             this.Name = "frmOki";
             this.Text = "OKI SPAIN";
             this.ResumeLayout(false);
+            this.PerformLayout();
 
         }
 
@@ -95,6 +115,8 @@ namespace Oki
         private System.Windows.Forms.ListBox lstArchivos;
         private System.Windows.Forms.Button btnProcesar;
         private System.Windows.Forms.Button btnEnviar;
+        private System.Windows.Forms.Label lblInfo;
+        private System.Windows.Forms.Label lblTxt;
     }
 }
 
