@@ -6,7 +6,10 @@ using System.Data.SqlClient;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Net;
+using System.Net.Mail;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Xml;
@@ -51,6 +54,7 @@ namespace Oki
         // Click on btnProcesar
         private void btnProcesar_Click(object sender, EventArgs e)
         {
+            btnProcesar.Enabled = false;
             importFiles();
         }
 
@@ -84,9 +88,8 @@ namespace Oki
                 }
                 catch(SqlException ex)
                 {
-                    MessageBox.Show("Error: Los ficheros ya han sido importados " + ex);
-                }
-                
+                    
+                }                
             }
         }
 
@@ -95,10 +98,21 @@ namespace Oki
         {
             foreach(String file in files)
             {
+                /*
+                string sourcePath = @"C:\xml's";
+                string targetPath = @"C:\xml's/importado";
+
+                string sourceFile = Path.Combine(sourcePath, Path.GetFileName(file));
+                string destFile = Path.Combine(targetPath, Path.GetFileName(file));
+                */
+
                 xmldoc.Load(file);
 
                 // New order for each file
                 Order order = new Order();
+
+                // Get file name and store it in observaciones
+                order.Observaciones = Path.GetFileName(file);
 
                 foreach (XmlNode node in xmldoc.DocumentElement.ChildNodes)
                 {
@@ -164,7 +178,7 @@ namespace Oki
 
                                     // Get Workcenter
                                     if (node.ChildNodes[i].ChildNodes[j].Name == "OkiServiceFees") order.Workcenter = node.ChildNodes[i].ChildNodes[j].SelectSingleNode("WorkC_Work_Center").InnerText;
-
+                                    order.Observaciones += $"{order.Workcenter}";
                                 }
                             }
                         }
@@ -172,15 +186,29 @@ namespace Oki
 
                     // Send order to checkStock method to check wether ther's available stock or not
                     checkStock(order);
+
+                    // Remove file from list
+                    if (lstArchivos.Items.Count > 0)
+                    {
+                        lstArchivos.Items.RemoveAt(0);
+                        // File.Move(sourceFile, destFile);
+                    }
+                    
+
                 }        
-            }            
+            }
+
+            // Update lblText
+            lblSetmsg("Presione Enviar para enviar los\ninformes de los archivos procesados");
         }
 
         // Check stock
         private void checkStock(Order order)
         {
+            Boolean cabeceraCreated = false;
+
             // Iterate through articles and check each one
-            for(int i = 0; i < order.Articles.Count; i++)
+            for (int i = 0; i < order.Articles.Count; i++)
             {
                 Boolean stockAtWarehouse = true;
                 int savedQty = 0;
@@ -212,7 +240,6 @@ namespace Oki
                         }
                     }
 
-                    // Add it to pedido_suministros_cabeceras and pedido_suministros_detalle
                 }
                 catch (SqlException ex)
                 {
@@ -222,7 +249,11 @@ namespace Oki
                 reader.Close();
 
                 if (stockAtWarehouse) saveStock(savedQty, order.Articles[i].ArticleNumber);
-                else createOrder(order, order.Articles[i]);
+                else
+                {
+                    createOrder(order, order.Articles[i], cabeceraCreated);
+                    cabeceraCreated = true;
+                }
 
             }
         }
@@ -237,28 +268,180 @@ namespace Oki
         }
 
         // Create Order
-        private void createOrder(Order order, Article article)
+        private void createOrder(Order order, Article article, Boolean cabeceraCreated)
         {
+            Client client = new Client();
+
             String num_pedido = order.NumPedido_TicketID; // Order number
             String codigo = article.ArticleNumber; // Article number
             String descripcion = article.Desc; // Article description
+            String workcenter = order.Workcenter; // Client's workcenter
             int cantidad = 1; // Quantity
             int numAlbaran = 1; // Número de Albarán
-            int PdtEntregar = 1; 
-            int n_cliente = 
+            int PdtEntregar = 1; // Pendiente de entregar
 
-            // Create new order and insert it into pedidos_compra
+            // We'll get n_cliente from Table Clientes using client's workcenter
+            query = $"select top 1 * from Clientes where workcentre = '{workcenter}'";
+            cmd = new SqlCommand(query, connection);
+            reader = cmd.ExecuteReader();
 
+            while (reader.Read())
+            {
+                // Get client data that we'll need later 
+                client.N_cliente = Convert.ToInt32(reader["n_cliente"].ToString());
+                client.Nom_cliente = reader["NombreCli"].ToString();
+                client.Dir_cliente = reader["Domicilio"].ToString();
+                client.Cp_cliente = reader["CodPostal"].ToString();
+                client.Poblacion_cliente = reader["Población"].ToString();
+                client.Provincia_cliente = reader["Provincia"].ToString();
+            }
 
+            // Close reader
+            reader.Close();
+
+            // Insert data into pedidos_suministros_cabecera
+            // This data has to be inserted just once, so we'll use a boolean to do it
+            if(cabeceraCreated == false)
+            {
+                query = "insert into pedidos_suministros_cabecera(Num_pedido, Fecha, n_cliente, serie, nom_cliente, dir_cliente, cp_cliente, poblacion_cliente, provincia_cliente, workc) " +
+                    $"values('{num_pedido}', '{order.Fecha_XML_Date}', {client.N_cliente}, '{order.Serie_Warranty_SerialNumber}', '{client.Nom_cliente}', '{client.Dir_cliente}',"
+                    + $" '{client.Cp_cliente}' ,'{client.Poblacion_cliente}', '{client.Provincia_cliente}', '{workcenter}'" + ")";
+                cmd = new SqlCommand(query, connection);
+                cmd.ExecuteNonQuery();
+            }
+
+            // Insert data into pedidos_suministros_detalles
+            query = "insert into pedidos_suministros_detalle(Num_pedido, Codigo, Descripcion, Cantidad, PendienteEnviar, cant_pedida, cant_a_pedir, cant_sinstock, pedido, envioacliente, n_cliente, cant_reservada, nserie, observaciones) " +
+                $"values('{num_pedido}', '{codigo}', '{descripcion}', 1, 0, 0, 0, 0, 1, 1, '{client.N_cliente}', 1, '{order.Serie_Warranty_SerialNumber}', '{order.Observaciones}')";
+            cmd = new SqlCommand(query, connection);
+            cmd.ExecuteNonQuery();
+            
+            // Insert data into pedidos_compra
+            query = "insert into pedidos_compra(Num_pedido, Codigo, Descripcion, Cantidad, numAlbaran, importado, entregada, PdtEntregar, n_cliente, cant_original)" +
+                $" values('{num_pedido}', '{codigo}', '{descripcion}', 1, 1, 0, 0, 1, '{client.N_cliente}', 0)";
+            cmd = new SqlCommand(query, connection);
+            cmd.ExecuteNonQuery();
         }
 
         // Send Info to customers
         private void sendInfoToCustomers()
         {
+            // Archivo para los talleres NO IMPLEMENTADO
+            infoTalleres();
+
+            // Archivo pedido de compra con el material que falta
+            pedidoCompra();
+
+            // Archivo con los pedidos procesados
+            pedidosProcesados();
+
+            // Enviar archivos
+            sendFiles();
+        }
+
+        // Mandar la info a los diferentes talleres que han hecho los pedidos
+        private void infoTalleres()
+        {
 
         }
 
-        // Class Pedido
+        // Mandar el pedido de compra con el material que hace falta pedir
+        private void pedidoCompra()
+        {
+            StreamWriter file = File.CreateText(@"C:\ficheros/pedidos.txt");
+
+            file.WriteLine("Lista de los materiales que faltan");
+
+            query = "select * from pedidos_compra";
+            cmd = new SqlCommand(query, connection);
+            reader = cmd.ExecuteReader();
+
+            while (reader.Read())
+            {
+                file.WriteLine("---------------------------------------------------------");
+                file.WriteLine($"Número del pedido: {reader["Num_pedido"].ToString()}");
+                file.WriteLine($"Código: {reader["Codigo"].ToString()}");
+                file.WriteLine($"Descripción: {reader["Descripcion"].ToString()}");
+                file.WriteLine($"Cantidad: {reader["Cantidad"].ToString()}");
+                file.WriteLine($"Cantidad pendiente de entregar: {reader["PdtEntregar"].ToString()}");
+                file.WriteLine($"Número del cliente: {reader["n_cliente"].ToString()}");
+                file.WriteLine("---------------------------------------------------------");
+
+            }
+
+            reader.Close();
+            file.Close();
+        }
+
+        // Mandar los pedidos que han sido procesados
+        private void pedidosProcesados()
+        {
+            StreamWriter file = File.CreateText(@"C:\ficheros/procesado.txt");
+
+            file.WriteLine("Lista de los pedidos procesados");
+
+            query = "select * from pedidos_suministros_detalle";
+            cmd = new SqlCommand(query, connection);
+            reader = cmd.ExecuteReader();
+
+            while (reader.Read())
+            {
+                file.WriteLine("---------------------------------------------------------");
+                file.WriteLine($"Número del pedido: {reader["Num_pedido"].ToString()}");
+                file.WriteLine($"Código: {reader["Codigo"].ToString()}");
+                file.WriteLine($"Número de serie: {reader["nserie"].ToString()}");
+                file.WriteLine($"Descripción: {reader["Descripcion"].ToString()}");
+                file.WriteLine($"Cantidad: {reader["Cantidad"].ToString()}");
+                file.WriteLine($"Número del cliente: {reader["n_cliente"].ToString()}");
+                file.WriteLine("---------------------------------------------------------");
+            }
+
+            reader.Close();
+            file.Close();
+
+        }
+
+        // Mandar los archivos por correo
+        private void sendFiles()
+        {
+            // Global variables to send info via email
+            String remitente = "alumnos2damAlmunia@gmail.com";
+            String destinatario = "natandelreal@gmail.com";
+            String password = "2dam2dam";
+            String asunto = "Pedidos OKI - Nathan";
+            String mensaje = "Ficheros con el pedido de compra y los pedidos procesados";
+
+            MailMessage mail = new MailMessage();
+            mail.From = new MailAddress(remitente);
+            mail.To.Add(remitente);
+            mail.Subject = asunto;
+            mail.Body = mensaje;
+
+            System.Net.Mail.Attachment pedidos, procesados;
+            pedidos = new System.Net.Mail.Attachment(@"C:\ficheros/pedidos.txt");
+            procesados = new System.Net.Mail.Attachment(@"C:\ficheros/procesado.txt");
+            mail.Attachments.Add(pedidos);
+            mail.Attachments.Add(procesados);
+
+            SmtpClient client = new SmtpClient()
+            {
+                Host = "smtp.gmail.com",
+                Port = 587,
+                Credentials = new NetworkCredential(remitente, password),
+                EnableSsl = true
+            };
+
+            try
+            {
+                client.Send(mail);
+            }
+            catch(Exception ex)
+            {
+                MessageBox.Show("Ha habido un error al mandar los archivos: " + ex);
+            }
+        }
+
+        // Class Order
         class Order
         {
             // Articles list
@@ -275,6 +458,7 @@ namespace Oki
             private String nomb_Cliente_Submitter;
             private String dir_Cliente_Loc_Street;
             private String fecha_XML_Date;
+            private String observaciones;
 
             // txt Files
             private String WorkCenterFileRoute;
@@ -299,6 +483,7 @@ namespace Oki
             public string BuyOrderFileRoute1 { get => BuyOrderFileRoute; set => BuyOrderFileRoute = value; }
             public string ProcessFileRoute1 { get => ProcessFileRoute; set => ProcessFileRoute = value; }
             public List<Article> Articles { get => articles; set => articles = value; }
+            public string Observaciones { get => observaciones; set => observaciones = value; }
         }
 
         // Class Article
@@ -329,14 +514,33 @@ namespace Oki
             public string Location { get => location; set => location = value; }
         }
 
+        // Class Cliente
+        class Client
+        {
+            // Attributes & Properties
+            private int n_cliente;
+            private String nom_cliente;
+            private String dir_cliente;
+            private String cp_cliente;
+            private String poblacion_cliente;
+            private String provincia_cliente;
+
+            public int N_cliente { get => n_cliente; set => n_cliente = value; }
+            public string Nom_cliente { get => nom_cliente; set => nom_cliente = value; }
+            public string Dir_cliente { get => dir_cliente; set => dir_cliente = value; }
+            public string Cp_cliente { get => cp_cliente; set => cp_cliente = value; }
+            public string Poblacion_cliente { get => poblacion_cliente; set => poblacion_cliente = value; }
+            public string Provincia_cliente { get => provincia_cliente; set => provincia_cliente = value; }
+        }
+
         public void stablishConnection()
         {
             lblSetmsg("Connecting to Database...");
 
             try
             {
-                // string cadenaDeConexion = @"Server=DESKTOP-ETLPSC5; Database=OkiSpain; Integrated Security=true;";
-                string cadenaDeConexion = @"Server=NATE; Database=OkiSpain; Integrated Security=true;";
+                string cadenaDeConexion = @"Server=DESKTOP-ETLPSC5; Database=OkiSpain; Integrated Security=true;";
+                // string cadenaDeConexion = @"Server=NATE; Database=OkiSpain; Integrated Security=true;";
 
                 connection = new SqlConnection(cadenaDeConexion);
 
